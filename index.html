@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>승민쿠폰</title>
+<style>
+  :root {
+    --bg: #f6f6f4;
+    --card: #ffffff;
+    --text: #1d1d1f;
+    --muted: #8a8a8e;
+    --line: #e6e6e3;
+    --accent: #ff6b4a;
+    --money: #1f9d6b;
+    --used: #c7c7cc;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 480px; margin: 0 auto; padding: 16px 16px 48px; }
+
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 0 20px;
+  }
+  .logo { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; }
+  .logo span { color: var(--accent); }
+  .balance {
+    background: var(--card); border: 1px solid var(--line); border-radius: 999px;
+    padding: 8px 14px; font-weight: 700; font-size: 15px;
+    display: flex; align-items: center; gap: 6px;
+    transition: transform .2s;
+  }
+  .balance small { color: var(--muted); font-weight: 500; font-size: 12px; }
+  .balance.bump { transform: scale(1.12); }
+
+  .hello { margin: 4px 0 20px; }
+  .hello h1 { font-size: 24px; margin: 0 0 4px; letter-spacing: -0.5px; }
+  .hello p { margin: 0; color: var(--muted); font-size: 14px; }
+
+  .tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+  .tab {
+    border: 1px solid var(--line); background: var(--card); color: var(--muted);
+    padding: 7px 14px; border-radius: 999px; font-size: 14px; cursor: pointer;
+  }
+  .tab.on { background: var(--text); color: #fff; border-color: var(--text); }
+
+  .list { display: flex; flex-direction: column; gap: 12px; }
+  .coupon {
+    background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+    display: flex; overflow: hidden; position: relative;
+  }
+  .coupon .side {
+    width: 78px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    background: var(--accent); color: #fff; font-weight: 800; font-size: 13px;
+    border-right: 2px dashed rgba(255,255,255,.6); text-align: center; padding: 6px;
+  }
+  .coupon.money .side { background: var(--money); }
+  .coupon.used .side { background: var(--used); }
+  .coupon .body { flex: 1; padding: 14px 14px 12px; min-width: 0; }
+  .coupon .title { font-weight: 700; font-size: 16px; margin-bottom: 2px; word-break: break-all; }
+  .coupon .desc { color: var(--muted); font-size: 13px; margin-bottom: 10px; word-break: break-all; }
+  .coupon .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .coupon .date { color: var(--muted); font-size: 12px; }
+  .coupon.used .title, .coupon.used .desc { color: var(--used); }
+
+  button.primary {
+    background: var(--text); color: #fff; border: 0; border-radius: 10px;
+    padding: 8px 14px; font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  button.ghost {
+    background: transparent; border: 1px solid var(--line); color: var(--muted);
+    border-radius: 10px; padding: 8px 12px; font-size: 13px; cursor: pointer;
+  }
+  button.danger { color: #e5484d; border-color: #f3c9ca; }
+  button:disabled { opacity: .4; cursor: default; }
+
+  .empty { text-align: center; color: var(--muted); padding: 48px 0; font-size: 14px; }
+
+  .admin-link {
+    display: block; margin: 32px auto 0; background: none; border: 0;
+    color: var(--muted); font-size: 12px; cursor: pointer; text-decoration: underline;
+  }
+
+  /* 관리자 패널 */
+  .panel {
+    background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+    padding: 16px; margin-bottom: 20px;
+  }
+  .panel h2 { font-size: 16px; margin: 0 0 12px; display: flex; justify-content: space-between; align-items: center; }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 10px 0 6px; }
+  input, select {
+    width: 100%; padding: 11px 12px; border: 1px solid var(--line); border-radius: 10px;
+    font-size: 15px; background: #fff; color: var(--text); font-family: inherit;
+  }
+  .seg { display: flex; gap: 8px; }
+  .seg button {
+    flex: 1; padding: 10px; border: 1px solid var(--line); background: #fff;
+    border-radius: 10px; font-size: 14px; cursor: pointer; color: var(--muted);
+  }
+  .seg button.on { border-color: var(--text); color: var(--text); font-weight: 700; }
+  .panel .primary { width: 100%; margin-top: 16px; padding: 12px; }
+
+  /* 모달 / 토스트 */
+  .modal-bg {
+    position: fixed; inset: 0; background: rgba(0,0,0,.35);
+    display: none; align-items: center; justify-content: center; padding: 16px; z-index: 10;
+  }
+  .modal-bg.show { display: flex; }
+  .modal {
+    background: var(--card); border-radius: 18px; padding: 22px; width: 100%; max-width: 340px;
+    text-align: center;
+  }
+  .modal h3 { margin: 0 0 8px; font-size: 18px; }
+  .modal p { margin: 0 0 18px; color: var(--muted); font-size: 14px; }
+  .modal .btns { display: flex; gap: 8px; }
+  .modal .btns button { flex: 1; padding: 12px; }
+  .modal input { margin-bottom: 4px; text-align: center; letter-spacing: 4px; }
+  .modal .err { color: #e5484d; font-size: 12px; min-height: 18px; margin-bottom: 8px; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px);
+    background: var(--text); color: #fff; padding: 12px 18px; border-radius: 999px;
+    font-size: 14px; opacity: 0; transition: all .25s; pointer-events: none; z-index: 20;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">승민<span>쿠폰</span></div>
+    <div class="balance" id="balance"><small>잔액</small><span id="balanceVal">0원</span></div>
+  </header>
+
+  <!-- 관리자 패널 (관리자 모드일 때만 표시) -->
+  <section class="panel" id="adminPanel" hidden>
+    <h2>관리자 · 쿠폰 추가 <button class="ghost" id="exitAdmin">나가기</button></h2>
+    <div class="seg" id="typeSeg">
+      <button type="button" data-type="normal" class="on">일반 쿠폰</button>
+      <button type="button" data-type="money">머니 쿠폰</button>
+    </div>
+    <label for="cTitle">쿠폰 이름</label>
+    <input id="cTitle" placeholder="예) 밥 한 끼 사주기" maxlength="40">
+    <div id="amountWrap" hidden>
+      <label for="cAmount">금액 (원)</label>
+      <input id="cAmount" type="number" inputmode="numeric" min="1" placeholder="예) 10000">
+    </div>
+    <label for="cDesc">설명 (선택)</label>
+    <input id="cDesc" placeholder="예) 언제든 연락만 해" maxlength="80">
+    <button class="primary" id="addBtn">최요셉에게 쿠폰 보내기</button>
+  </section>
+
+  <div class="hello">
+    <h1>요셉아, 선물 왔어 🎁</h1>
+    <p>승민이가 준 쿠폰이야. 필요할 때 써!</p>
+  </div>
+
+  <div class="tabs">
+    <button class="tab on" data-filter="available">사용 가능</button>
+    <button class="tab" data-filter="used">사용 완료</button>
+  </div>
+
+  <div class="list" id="list"></div>
+
+  <button class="admin-link" id="adminLink">관리자</button>
+</div>
+
+<!-- 확인 / 비밀번호 모달 -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <h3 id="mTitle"></h3>
+    <p id="mText"></p>
+    <input id="mInput" type="password" inputmode="numeric" maxlength="12" hidden>
+    <div class="err" id="mErr" hidden></div>
+    <div class="btns">
+      <button class="ghost" id="mCancel">취소</button>
+      <button class="primary" id="mOk">확인</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const KEY = 'seungmin-coupon-v1';
+  const $ = (id) => document.getElementById(id);
+
+  function load() {
+    try {
+      const d = JSON.parse(localStorage.getItem(KEY));
+      if (d && Array.isArray(d.coupons)) return d;
+    } catch (e) {}
+    return { coupons: [], balance: 0, pin: null };
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+  }
+
+  const state = load();
+  let filter = 'available';
+  let isAdmin = false;
+  let newType = 'normal';
+
+  const won = (n) => n.toLocaleString('ko-KR') + '원';
+  const fmtDate = (t) => {
+    const d = new Date(t);
+    return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
+  };
+  const esc = (s) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  function render() {
+    $('balanceVal').textContent = won(state.balance);
+    $('adminPanel').hidden = !isAdmin;
+    $('adminLink').hidden = isAdmin;
+
+    const items = state.coupons
+      .filter((c) => (filter === 'used' ? c.used : !c.used))
+      .sort((a, b) => b.createdAt - a.createdAt);
+
+    if (!items.length) {
+      $('list').innerHTML = `<div class="empty">${filter === 'used' ? '아직 사용한 쿠폰이 없어요' : '받은 쿠폰이 없어요'}</div>`;
+      return;
+    }
+
+    $('list').innerHTML = items.map((c) => `
+      <div class="coupon ${c.type === 'money' ? 'money' : ''} ${c.used ? 'used' : ''}">
+        <div class="side">${c.type === 'money' ? won(c.amount) : 'COUPON'}</div>
+        <div class="body">
+          <div class="title">${esc(c.title)}</div>
+          <div class="desc">${c.desc ? esc(c.desc) : (c.type === 'money' ? '사용하면 잔액에 추가돼요' : '&nbsp;')}</div>
+          <div class="row">
+            <span class="date">${c.used ? fmtDate(c.usedAt) + ' 사용' : fmtDate(c.createdAt) + ' 받음'}</span>
+            <span>
+              ${isAdmin ? `<button class="ghost danger" data-del="${c.id}">삭제</button>` : ''}
+              ${c.used ? '' : `<button class="primary" data-use="${c.id}">사용하기</button>`}
+            </span>
+          </div>
+        </div>
+      </div>`).join('');
+  }
+
+  // ---------- 모달 ----------
+  function modal({ title, text, input = false, okText = '확인' }) {
+    return new Promise((resolve) => {
+      $('mTitle').textContent = title;
+      $('mText').textContent = text;
+      $('mInput').hidden = !input;
+      $('mInput').value = '';
+      $('mErr').hidden = true;
+      $('mOk').textContent = okText;
+      $('modalBg').classList.add('show');
+      if (input) setTimeout(() => $('mInput').focus(), 50);
+
+      const close = (v) => {
+        $('modalBg').classList.remove('show');
+        $('mOk').onclick = $('mCancel').onclick = $('mInput').onkeydown = null;
+        resolve(v);
+      };
+      $('mOk').onclick = () => close(input ? $('mInput').value : true);
+      $('mCancel').onclick = () => close(null);
+      $('mInput').onkeydown = (e) => { if (e.key === 'Enter') $('mOk').click(); };
+    });
+  }
+
+  let toastTimer;
+  function toast(msg) {
+    $('toast').textContent = msg;
+    $('toast').classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => $('toast').classList.remove('show'), 2000);
+  }
+
+  // ---------- 쿠폰 사용 / 삭제 ----------
+  $('list').addEventListener('click', async (e) => {
+    const useId = e.target.dataset.use;
+    const delId = e.target.dataset.del;
+
+    if (useId) {
+      const c = state.coupons.find((x) => x.id === useId);
+      const ok = await modal({
+        title: `'${c.title}' 사용할까요?`,
+        text: c.type === 'money' ? `${won(c.amount)}이 잔액에 추가돼요.` : '사용하면 되돌릴 수 없어요.',
+        okText: '사용하기',
+      });
+      if (!ok) return;
+      c.used = true;
+      c.usedAt = Date.now();
+      if (c.type === 'money') {
+        state.balance += c.amount;
+        $('balance').classList.add('bump');
+        setTimeout(() => $('balance').classList.remove('bump'), 250);
+        toast(`💰 ${won(c.amount)} 충전 완료!`);
+      } else {
+        toast('🎉 쿠폰을 사용했어요! 승민이한테 말해줘');
+      }
+      save(); render();
+    }
+
+    if (delId) {
+      const ok = await modal({ title: '쿠폰 삭제', text: '이 쿠폰을 삭제할까요?', okText: '삭제' });
+      if (!ok) return;
+      state.coupons = state.coupons.filter((x) => x.id !== delId);
+      save(); render();
+    }
+  });
+
+  // ---------- 탭 ----------
+  document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach((x) => x.classList.remove('on'));
+    t.classList.add('on');
+    filter = t.dataset.filter;
+    render();
+  }));
+
+  // ---------- 관리자 진입 ----------
+  $('adminLink').addEventListener('click', async () => {
+    if (!state.pin) {
+      const pin = await modal({ title: '관리자 비밀번호 설정', text: '처음이네요! 관리자 비밀번호를 정해주세요.', input: true });
+      if (!pin) return;
+      state.pin = pin;
+      save();
+    } else {
+      const pin = await modal({ title: '관리자 로그인', text: '비밀번호를 입력하세요.', input: true });
+      if (pin === null) return;
+      if (pin !== state.pin) { toast('비밀번호가 틀렸어요'); return; }
+    }
+    isAdmin = true;
+    render();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  $('exitAdmin').addEventListener('click', () => { isAdmin = false; render(); });
+
+  // ---------- 쿠폰 추가 ----------
+  document.querySelectorAll('#typeSeg button').forEach((b) => b.addEventListener('click', () => {
+    document.querySelectorAll('#typeSeg button').forEach((x) => x.classList.remove('on'));
+    b.classList.add('on');
+    newType = b.dataset.type;
+    $('amountWrap').hidden = newType !== 'money';
+  }));
+
+  $('addBtn').addEventListener('click', () => {
+    const title = $('cTitle').value.trim();
+    const desc = $('cDesc').value.trim();
+    const amount = Math.floor(Number($('cAmount').value));
+
+    if (!title) { toast('쿠폰 이름을 입력해주세요'); return; }
+    if (newType === 'money' && !(amount > 0)) { toast('금액을 입력해주세요'); return; }
+
+    state.coupons.push({
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      type: newType,
+      title,
+      desc,
+      amount: newType === 'money' ? amount : 0,
+      used: false,
+      createdAt: Date.now(),
+    });
+    save();
+    $('cTitle').value = $('cDesc').value = $('cAmount').value = '';
+    filter = 'available';
+    document.querySelectorAll('.tab').forEach((x) => x.classList.toggle('on', x.dataset.filter === 'available'));
+    render();
+    toast('✅ 요셉이에게 쿠폰을 보냈어요');
+  });
+
+  render();
+</script>
+</body>
+</html>
