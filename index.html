@@ -154,13 +154,13 @@
       <input id="cAmount" type="number" inputmode="numeric" min="1" placeholder="예) 10000">
     </div>
     <label for="cDesc">설명 (선택)</label>
-    <input id="cDesc" placeholder="예) 언제든 연락만 해" maxlength="80">
-    <button class="primary" id="addBtn">최요셉에게 쿠폰 보내기</button>
+    <input id="cDesc" placeholder="예) 유효기간 없음" maxlength="80">
+    <button class="primary" id="addBtn">지급</button>
   </section>
 
   <div class="hello">
-    <h1>요셉아, 선물 왔어 🎁</h1>
-    <p>승민이가 준 쿠폰이야. 필요할 때 써!</p>
+    <h1>최요셉.</h1>
+    <p>쿠폰 지급됨. 알아서 쓰도록.</p>
   </div>
 
   <div class="tabs">
@@ -226,7 +226,7 @@
       .sort((a, b) => b.createdAt - a.createdAt);
 
     if (!items.length) {
-      $('list').innerHTML = `<div class="empty">${filter === 'used' ? '아직 사용한 쿠폰이 없어요' : '받은 쿠폰이 없어요'}</div>`;
+      $('list').innerHTML = `<div class="empty">${filter === 'used' ? '사용 내역 없음.' : '쿠폰 없음.'}</div>`;
       return;
     }
 
@@ -235,12 +235,12 @@
         <div class="side">${c.type === 'money' ? won(c.amount) : 'COUPON'}</div>
         <div class="body">
           <div class="title">${esc(c.title)}</div>
-          <div class="desc">${c.desc ? esc(c.desc) : (c.type === 'money' ? '사용하면 잔액에 추가돼요' : '&nbsp;')}</div>
+          <div class="desc">${c.desc ? esc(c.desc) : (c.type === 'money' ? '사용 시 잔액 반영.' : '&nbsp;')}</div>
           <div class="row">
             <span class="date">${c.used ? fmtDate(c.usedAt) + ' 사용' : fmtDate(c.createdAt) + ' 받음'}</span>
             <span>
               ${isAdmin ? `<button class="ghost danger" data-del="${c.id}">삭제</button>` : ''}
-              ${c.used ? '' : `<button class="primary" data-use="${c.id}">사용하기</button>`}
+              ${c.used ? '' : `<button class="primary" data-use="${c.id}">사용</button>`}
             </span>
           </div>
         </div>
@@ -286,9 +286,9 @@
     if (useId) {
       const c = state.coupons.find((x) => x.id === useId);
       const ok = await modal({
-        title: `'${c.title}' 사용할까요?`,
-        text: c.type === 'money' ? `${won(c.amount)}이 잔액에 추가돼요.` : '사용하면 되돌릴 수 없어요.',
-        okText: '사용하기',
+        title: `'${c.title}' 사용?`,
+        text: c.type === 'money' ? `${won(c.amount)} 잔액 반영됨.` : '되돌릴 수 없음.',
+        okText: '사용',
       });
       if (!ok) return;
       c.used = true;
@@ -297,15 +297,15 @@
         state.balance += c.amount;
         $('balance').classList.add('bump');
         setTimeout(() => $('balance').classList.remove('bump'), 250);
-        toast(`💰 ${won(c.amount)} 충전 완료!`);
+        toast(`${won(c.amount)} 충전됨.`);
       } else {
-        toast('🎉 쿠폰을 사용했어요! 승민이한테 말해줘');
+        toast('사용 처리됨. 승민에게 통보할 것.');
       }
       save(); render();
     }
 
     if (delId) {
-      const ok = await modal({ title: '쿠폰 삭제', text: '이 쿠폰을 삭제할까요?', okText: '삭제' });
+      const ok = await modal({ title: '쿠폰 삭제', text: '삭제?', okText: '삭제' });
       if (!ok) return;
       state.coupons = state.coupons.filter((x) => x.id !== delId);
       save(); render();
@@ -323,14 +323,14 @@
   // ---------- 관리자 진입 ----------
   $('adminLink').addEventListener('click', async () => {
     if (!state.pin) {
-      const pin = await modal({ title: '관리자 비밀번호 설정', text: '처음이네요! 관리자 비밀번호를 정해주세요.', input: true });
+      const pin = await modal({ title: '관리자 비밀번호 설정', text: '비밀번호 설정.', input: true });
       if (!pin) return;
       state.pin = pin;
       save();
     } else {
-      const pin = await modal({ title: '관리자 로그인', text: '비밀번호를 입력하세요.', input: true });
+      const pin = await modal({ title: '관리자 로그인', text: '비밀번호 입력.', input: true });
       if (pin === null) return;
-      if (pin !== state.pin) { toast('비밀번호가 틀렸어요'); return; }
+      if (pin !== state.pin) { toast('비밀번호 불일치.'); return; }
     }
     isAdmin = true;
     render();
@@ -352,8 +352,8 @@
     const desc = $('cDesc').value.trim();
     const amount = Math.floor(Number($('cAmount').value));
 
-    if (!title) { toast('쿠폰 이름을 입력해주세요'); return; }
-    if (newType === 'money' && !(amount > 0)) { toast('금액을 입력해주세요'); return; }
+    if (!title) { toast('쿠폰 이름 필요.'); return; }
+    if (newType === 'money' && !(amount > 0)) { toast('금액 필요.'); return; }
 
     state.coupons.push({
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
@@ -369,7 +369,7 @@
     filter = 'available';
     document.querySelectorAll('.tab').forEach((x) => x.classList.toggle('on', x.dataset.filter === 'available'));
     render();
-    toast('✅ 요셉이에게 쿠폰을 보냈어요');
+    toast('지급 완료.');
   });
 
   render();
