@@ -13,9 +13,12 @@
     --line: #e6e6e3;
     --accent: #ff6b4a;
     --money: #1f9d6b;
+    --gacha: #6e56cf;
     --used: #c7c7cc;
+    --danger: #e5484d;
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   body {
     margin: 0;
     background: var(--bg);
@@ -35,22 +38,19 @@
     background: var(--card); border: 1px solid var(--line); border-radius: 999px;
     padding: 8px 14px; font-weight: 700; font-size: 15px;
     display: flex; align-items: center; gap: 6px;
-    transition: transform .2s;
+    transition: transform .2s; cursor: pointer;
   }
   .balance small { color: var(--muted); font-weight: 500; font-size: 12px; }
   .balance.bump { transform: scale(1.12); }
 
-  .hello { margin: 4px 0 20px; }
+  .hello { margin: 4px 0 16px; }
   .hello h1 { font-size: 24px; margin: 0 0 4px; letter-spacing: -0.5px; }
   .hello p { margin: 0; color: var(--muted); font-size: 14px; }
 
-  .tabs { display: flex; gap: 8px; margin-bottom: 14px; align-items: center; }
-  .tabs .spend-btn { margin-left: auto; }
-  .balance { cursor: pointer; }
-  .coupon.spend .side { background: var(--text); }
-  .modal .field { text-align: left; }
-  .modal .field label { margin-top: 0; }
-  .modal .field input { letter-spacing: 0; text-align: left; margin-bottom: 10px; }
+  .actions { display: flex; gap: 8px; margin-bottom: 20px; }
+  .actions button { flex: 1; padding: 12px; }
+
+  .tabs { display: flex; gap: 8px; margin-bottom: 14px; }
   .tab {
     border: 1px solid var(--line); background: var(--card); color: var(--muted);
     padding: 7px 14px; border-radius: 999px; font-size: 14px; cursor: pointer;
@@ -66,16 +66,30 @@
     width: 78px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
     background: var(--accent); color: #fff; font-weight: 800; font-size: 13px;
     border-right: 2px dashed rgba(255,255,255,.6); text-align: center; padding: 6px;
+    word-break: break-all;
   }
   .coupon.money .side { background: var(--money); }
+  .coupon.gacha .side { background: var(--gacha); }
+  .coupon.dark .side { background: var(--text); }
   .coupon.used .side { background: var(--used); }
   .coupon .body { flex: 1; padding: 14px 14px 12px; min-width: 0; }
   .coupon .title { font-weight: 700; font-size: 16px; margin-bottom: 2px; word-break: break-all; }
+  .coupon .title .count { color: var(--gacha); margin-left: 4px; }
   .coupon .desc { color: var(--muted); font-size: 13px; margin-bottom: 10px; word-break: break-all; }
   .coupon .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .coupon .row > span:last-child { display: flex; gap: 6px; flex-shrink: 0; }
   .coupon .date { color: var(--muted); font-size: 12px; }
   .coupon.used .title, .coupon.used .desc { color: var(--used); }
-  .empty small { font-size: 11px; word-break: break-all; }
+  .plus { color: var(--money); }
+  .minus { color: var(--danger); }
+
+  .odds { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
+  .odds span {
+    font-size: 12px; background: var(--bg); border-radius: 6px; padding: 3px 7px; color: var(--muted);
+  }
+  .odds span.real { outline: 1px solid var(--gacha); color: var(--gacha); }
+  .stack { display: flex; flex-direction: column; gap: 8px; margin: -4px 0 0 18px; }
+  .stack .coupon { border-style: dashed; }
 
   button.primary {
     background: var(--text); color: #fff; border: 0; border-radius: 10px;
@@ -85,10 +99,11 @@
     background: transparent; border: 1px solid var(--line); color: var(--muted);
     border-radius: 10px; padding: 8px 12px; font-size: 13px; cursor: pointer;
   }
-  button.danger { color: #e5484d; border-color: #f3c9ca; }
+  button.danger { color: var(--danger); border-color: #f3c9ca; }
   button:disabled { opacity: .4; cursor: default; }
 
   .empty { text-align: center; color: var(--muted); padding: 48px 0; font-size: 14px; }
+  .empty small { font-size: 11px; word-break: break-all; }
 
   .admin-link {
     display: block; margin: 32px auto 0; background: none; border: 0;
@@ -101,6 +116,7 @@
     padding: 16px; margin-bottom: 20px;
   }
   .panel h2 { font-size: 16px; margin: 0 0 12px; display: flex; justify-content: space-between; align-items: center; }
+  .panel .seg { margin-bottom: 4px; }
   label { display: block; font-size: 13px; color: var(--muted); margin: 10px 0 6px; }
   input, select {
     width: 100%; padding: 11px 12px; border: 1px solid var(--line); border-radius: 10px;
@@ -112,7 +128,27 @@
     border-radius: 10px; font-size: 14px; cursor: pointer; color: var(--muted);
   }
   .seg button.on { border-color: var(--text); color: var(--text); font-weight: 700; }
-  .panel .primary { width: 100%; margin-top: 16px; padding: 12px; }
+  .panel .primary.wide { width: 100%; margin-top: 16px; padding: 12px; }
+  .two { display: flex; gap: 8px; }
+  .two > div { flex: 1; }
+
+  .outcomes { display: flex; flex-direction: column; gap: 6px; }
+  .orow, .ohead {
+    display: grid; grid-template-columns: 1fr 58px 58px 34px 30px; gap: 6px; align-items: center;
+  }
+  .ohead { font-size: 11px; color: var(--muted); }
+  .ohead span:nth-child(n+2) { text-align: center; }
+  .orow input { padding: 9px 8px; font-size: 14px; }
+  .orow input[type=radio] { width: 18px; height: 18px; margin: 0 auto; accent-color: var(--gacha); }
+  .orow button { border: 0; background: none; color: var(--muted); font-size: 18px; cursor: pointer; padding: 0; }
+  .hint { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
+  .addrow { margin-top: 8px; width: 100%; }
+
+  .wd { border-top: 1px solid var(--line); padding: 12px 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .wd:first-child { border-top: 0; }
+  .wd b { display: block; }
+  .wd small { color: var(--muted); font-size: 12px; word-break: break-all; }
+  .wd > span:last-child { display: flex; gap: 6px; flex-shrink: 0; }
 
   /* 모달 / 토스트 */
   .modal-bg {
@@ -128,8 +164,19 @@
   .modal p { margin: 0 0 18px; color: var(--muted); font-size: 14px; }
   .modal .btns { display: flex; gap: 8px; }
   .modal .btns button { flex: 1; padding: 12px; }
-  .modal input { margin-bottom: 4px; text-align: center; letter-spacing: 4px; }
-  .modal .err { color: #e5484d; font-size: 12px; min-height: 18px; margin-bottom: 8px; }
+  .modal #mInput { margin-bottom: 4px; text-align: center; letter-spacing: 4px; }
+  .modal .err { color: var(--danger); font-size: 12px; min-height: 18px; margin-bottom: 8px; }
+  .modal .field { text-align: left; }
+  .modal .field label { margin-top: 0; }
+  .modal .field input { margin-bottom: 10px; }
+
+  .reel {
+    font-size: 34px; font-weight: 800; height: 64px; display: flex; align-items: center; justify-content: center;
+    background: var(--bg); border-radius: 14px; margin: 6px 0 12px; color: var(--gacha);
+  }
+  .reel.done { animation: pop .3s; }
+  @keyframes pop { 50% { transform: scale(1.12); } }
+  #drawResult { min-height: 20px; font-weight: 700; margin-bottom: 16px; }
 
   .toast {
     position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px);
@@ -149,20 +196,57 @@
 
   <!-- 관리자 패널 (관리자 모드일 때만 표시) -->
   <section class="panel" id="adminPanel" hidden>
-    <h2>관리자 · 쿠폰 추가 <button class="ghost" id="exitAdmin">나가기</button></h2>
-    <div class="seg" id="typeSeg">
-      <button type="button" data-type="normal" class="on">일반 쿠폰</button>
-      <button type="button" data-type="money">머니 쿠폰</button>
+    <h2>관리자 <button class="ghost" id="exitAdmin">나가기</button></h2>
+    <div class="seg" id="adminSeg">
+      <button type="button" data-pane="coupon" class="on">쿠폰</button>
+      <button type="button" data-pane="gacha">뽑기</button>
+      <button type="button" data-pane="withdraw" id="wdSegBtn">출금</button>
     </div>
-    <label for="cTitle">쿠폰 이름</label>
-    <input id="cTitle" placeholder="예) 밥 한 끼 사주기" maxlength="40">
-    <div id="amountWrap" hidden>
-      <label for="cAmount">금액 (원)</label>
-      <input id="cAmount" type="number" inputmode="numeric" min="1" placeholder="예) 10000">
+
+    <!-- 쿠폰 지급 -->
+    <div data-panel="coupon">
+      <label>종류</label>
+      <div class="seg" id="typeSeg">
+        <button type="button" data-type="normal" class="on">일반 쿠폰</button>
+        <button type="button" data-type="money">머니 쿠폰</button>
+      </div>
+      <label for="cTitle">쿠폰 이름</label>
+      <input id="cTitle" placeholder="예) 밥 한 끼 사주기" maxlength="40">
+      <div id="amountWrap" hidden>
+        <label for="cAmount">금액 (원)</label>
+        <input id="cAmount" type="number" inputmode="numeric" min="1" placeholder="예) 10000">
+      </div>
+      <label for="cDesc">설명 (선택)</label>
+      <input id="cDesc" placeholder="예) 유효기간 없음" maxlength="80">
+      <button class="primary wide" id="addBtn">지급</button>
     </div>
-    <label for="cDesc">설명 (선택)</label>
-    <input id="cDesc" placeholder="예) 유효기간 없음" maxlength="80">
-    <button class="primary" id="addBtn">지급</button>
+
+    <!-- 뽑기 등록 -->
+    <div data-panel="gacha" hidden>
+      <label for="gName">뽑기 이름</label>
+      <input id="gName" placeholder="예) 1000원 도박" maxlength="30">
+      <div class="two">
+        <div>
+          <label for="gPrice">가격 (원)</label>
+          <input id="gPrice" type="number" inputmode="numeric" min="1" placeholder="1000">
+        </div>
+        <div>
+          <label for="gQty">수량</label>
+          <input id="gQty" type="number" inputmode="numeric" min="1" max="50" value="1">
+        </div>
+      </div>
+      <label>결과 목록</label>
+      <div class="ohead"><span>이름</span><span>배율</span><span>확률%</span><span>실제</span><span></span></div>
+      <div class="outcomes" id="outcomes"></div>
+      <button type="button" class="ghost addrow" id="addOutcome">+ 결과 추가</button>
+      <p class="hint">확률은 화면에 보여주기용. 실제 결과는 '실제'에 체크한 것으로 고정. 받는 돈 = 가격 × 배율.</p>
+      <button class="primary wide" id="addGacha">상점에 등록</button>
+    </div>
+
+    <!-- 출금 요청 -->
+    <div data-panel="withdraw" hidden>
+      <div id="wdList"></div>
+    </div>
   </section>
 
   <div class="hello">
@@ -170,10 +254,15 @@
     <p>쿠폰 지급됨.</p>
   </div>
 
+  <div class="actions">
+    <button class="primary" id="spendBtn">잔액 사용</button>
+    <button class="primary" id="withdrawBtn">출금</button>
+  </div>
+
   <div class="tabs">
-    <button class="tab on" data-filter="available">사용 가능</button>
-    <button class="tab" data-filter="used">사용 완료</button>
-    <button class="primary spend-btn" id="spendBtn">잔액 사용</button>
+    <button class="tab on" data-filter="coupons">쿠폰</button>
+    <button class="tab" data-filter="shop">상점</button>
+    <button class="tab" data-filter="history">내역</button>
   </div>
 
   <div class="list" id="list"></div>
@@ -195,21 +284,31 @@
   </div>
 </div>
 
-<!-- 잔액 사용 모달 -->
+<!-- 잔액 사용 / 출금 모달 -->
 <div class="modal-bg" id="spendBg">
   <div class="modal">
-    <h3>잔액 사용</h3>
+    <h3 id="sTitle"></h3>
     <p id="spendText"></p>
     <div class="field">
       <label for="sAmount">금액 (원)</label>
       <input id="sAmount" type="number" inputmode="numeric" min="1" placeholder="예) 5000">
-      <label for="sMemo">사용처 (선택)</label>
-      <input id="sMemo" placeholder="예) 편의점" maxlength="40">
+      <label for="sMemo" id="sMemoLabel"></label>
+      <input id="sMemo" maxlength="40">
     </div>
     <div class="btns">
       <button class="ghost" id="sCancel">취소</button>
-      <button class="primary" id="sOk">사용</button>
+      <button class="primary" id="sOk"></button>
     </div>
+  </div>
+</div>
+
+<!-- 뽑기 결과 모달 -->
+<div class="modal-bg" id="drawBg">
+  <div class="modal">
+    <h3 id="drawTitle"></h3>
+    <div class="reel" id="reel"></div>
+    <div id="drawResult"></div>
+    <div class="btns"><button class="primary" id="drawOk" disabled>확인</button></div>
   </div>
 </div>
 
@@ -218,7 +317,7 @@
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
   import {
-    getFirestore, collection, doc, onSnapshot, addDoc, deleteDoc, getDoc, setDoc, runTransaction,
+    getFirestore, collection, doc, onSnapshot, addDoc, deleteDoc, getDoc, setDoc, runTransaction, writeBatch,
   } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
   const firebaseConfig = {
@@ -231,17 +330,24 @@
   };
   const db = getFirestore(initializeApp(firebaseConfig));
   const couponsRef = collection(db, 'coupons');
+  const spendsRef = collection(db, 'spends');
+  const shopRef = collection(db, 'shop');
+  const drawsRef = collection(db, 'draws');
+  const withdrawalsRef = collection(db, 'withdrawals');
   const walletRef = doc(db, 'meta', 'wallet');
   const adminRef = doc(db, 'meta', 'admin');
-  const spendsRef = collection(db, 'spends');
 
   const ADMIN_KEY = 'seungmin-coupon-admin';
   const $ = (id) => document.getElementById(id);
 
-  const state = { coupons: [], spends: [], balance: 0, loaded: false, error: null };
-  let filter = 'available';
+  const state = {
+    coupons: [], spends: [], shop: [], draws: [], withdrawals: [],
+    balance: 0, loaded: false, error: null,
+  };
+  let filter = 'coupons';
   let isAdmin = false;
   let newType = 'normal';
+  const openStacks = new Set();
   try { isAdmin = localStorage.getItem(ADMIN_KEY) === '1'; } catch (e) {}
 
   const won = (n) => (n || 0).toLocaleString('ko-KR') + '원';
@@ -249,7 +355,8 @@
     const d = new Date(t);
     return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
   };
-  const esc = (s) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const multText = (m) => '×' + m;
 
   async function sha256(text) {
     const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('seungmin-coupon:' + text));
@@ -262,39 +369,9 @@
     render();
   }
 
-  function render() {
-    $('balanceVal').textContent = won(state.balance);
-    $('adminPanel').hidden = !isAdmin;
-    $('adminLink').hidden = isAdmin;
-
-    if (state.error) {
-      $('list').innerHTML = `<div class="empty">연결 실패.<br><small>${esc(state.error)}</small></div>`;
-      return;
-    }
-    if (!state.loaded) {
-      $('list').innerHTML = '<div class="empty">불러오는 중.</div>';
-      return;
-    }
-
-    const items = filter === 'used'
-      ? [...state.coupons.filter((c) => c.used), ...state.spends.map((x) => ({ ...x, type: 'spend', used: true, usedAt: x.createdAt }))]
-        .sort((a, b) => b.usedAt - a.usedAt)
-      : state.coupons.filter((c) => !c.used).sort((a, b) => b.createdAt - a.createdAt);
-
-    if (!items.length) {
-      $('list').innerHTML = `<div class="empty">${filter === 'used' ? '사용 내역 없음.' : '쿠폰 없음.'}</div>`;
-      return;
-    }
-
-    $('list').innerHTML = items.map((c) => c.type === 'spend' ? `
-      <div class="coupon spend">
-        <div class="side">-${won(c.amount)}</div>
-        <div class="body">
-          <div class="title">${c.memo ? esc(c.memo) : '잔액 사용'}</div>
-          <div class="desc">잔액 차감.</div>
-          <div class="row"><span class="date">${fmtDate(c.createdAt)} 사용</span></div>
-        </div>
-      </div>` : `
+  // ---------- 렌더링 ----------
+  function couponCard(c) {
+    return `
       <div class="coupon ${c.type === 'money' ? 'money' : ''} ${c.used ? 'used' : ''}">
         <div class="side">${c.type === 'money' ? won(c.amount) : 'COUPON'}</div>
         <div class="body">
@@ -308,23 +385,149 @@
             </span>
           </div>
         </div>
-      </div>`).join('');
+      </div>`;
+  }
+
+  function oddsHtml(g) {
+    return `<div class="odds">${g.outcomes.map((o, i) => `
+      <span class="${isAdmin && i === g.result ? 'real' : ''}">${esc(o.label)} ${multText(o.mult)} · ${o.prob}%</span>`).join('')}</div>`;
+  }
+
+  function gachaCard(g, count, key) {
+    const stacked = count > 1;
+    return `
+      <div class="coupon gacha" ${stacked ? `data-stack="${esc(key)}" style="cursor:pointer"` : ''}>
+        <div class="side">${won(g.price)}</div>
+        <div class="body">
+          <div class="title">${esc(g.name)}${stacked ? `<span class="count">×${count}</span>` : ''}</div>
+          ${oddsHtml(g)}
+          <div class="row">
+            <span class="date">${stacked ? (openStacks.has(key) ? '접기 ▲' : '펼치기 ▼') : (isAdmin ? '실제: ' + esc(g.outcomes[g.result].label) : '')}</span>
+            <span>
+              ${isAdmin && !stacked ? `<button class="ghost danger" data-gdel="${g.id}">삭제</button>` : ''}
+              <button class="primary" data-draw="${g.id}">뽑기</button>
+            </span>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function historyCard(h) {
+    if (h.kind === 'coupon') return couponCard(h);
+    if (h.kind === 'spend') {
+      return `
+        <div class="coupon dark">
+          <div class="side">-${won(h.amount)}</div>
+          <div class="body">
+            <div class="title">${h.memo ? esc(h.memo) : '잔액 사용'}</div>
+            <div class="desc">잔액 차감.</div>
+            <div class="row"><span class="date">${fmtDate(h.at)} 사용</span></div>
+          </div>
+        </div>`;
+    }
+    if (h.kind === 'draw') {
+      const net = h.payout - h.price;
+      return `
+        <div class="coupon gacha">
+          <div class="side">${esc(h.label)}<br>${multText(h.mult)}</div>
+          <div class="body">
+            <div class="title">${esc(h.name)}</div>
+            <div class="desc">-${won(h.price)} / +${won(h.payout)} → <b class="${net >= 0 ? 'plus' : 'minus'}">${net >= 0 ? '+' : ''}${won(net)}</b></div>
+            <div class="row"><span class="date">${fmtDate(h.at)} 뽑기</span></div>
+          </div>
+        </div>`;
+    }
+    const status = { pending: '처리 대기.', done: '출금 완료.', rejected: '거절됨. 잔액 환불.' }[h.status];
+    return `
+      <div class="coupon dark ${h.status === 'rejected' ? 'used' : ''}">
+        <div class="side">출금</div>
+        <div class="body">
+          <div class="title">${won(h.amount)}</div>
+          <div class="desc">${status}${h.memo ? ' ' + esc(h.memo) : ''}</div>
+          <div class="row"><span class="date">${fmtDate(h.at)} 신청</span></div>
+        </div>
+      </div>`;
+  }
+
+  // 같은 이름의 뽑기는 하나로 묶기 (먼저 등록한 것부터)
+  function shopGroups() {
+    const groups = new Map();
+    [...state.shop].sort((a, b) => a.createdAt - b.createdAt).forEach((g) => {
+      if (!groups.has(g.name)) groups.set(g.name, []);
+      groups.get(g.name).push(g);
+    });
+    return [...groups.entries()];
+  }
+
+  function renderAdmin() {
+    $('adminPanel').hidden = !isAdmin;
+    $('adminLink').hidden = isAdmin;
+    if (!isAdmin) return;
+    const pending = state.withdrawals.filter((w) => w.status === 'pending').sort((a, b) => a.createdAt - b.createdAt);
+    $('wdSegBtn').textContent = pending.length ? `출금 (${pending.length})` : '출금';
+    $('wdList').innerHTML = pending.length
+      ? pending.map((w) => `
+        <div class="wd">
+          <span><b>${won(w.amount)}</b><small>${fmtDate(w.createdAt)}${w.memo ? ' · ' + esc(w.memo) : ''}</small></span>
+          <span>
+            <button class="ghost danger" data-wd-reject="${w.id}">거절</button>
+            <button class="primary" data-wd-done="${w.id}">완료</button>
+          </span>
+        </div>`).join('')
+      : '<div class="empty" style="padding:24px 0">대기 중인 출금 없음.</div>';
+  }
+
+  function render() {
+    $('balanceVal').textContent = won(state.balance);
+    renderAdmin();
+
+    if (state.error) {
+      $('list').innerHTML = `<div class="empty">연결 실패.<br><small>${esc(state.error)}</small></div>`;
+      return;
+    }
+    if (!state.loaded) {
+      $('list').innerHTML = '<div class="empty">불러오는 중.</div>';
+      return;
+    }
+
+    let html = '';
+    if (filter === 'coupons') {
+      html = state.coupons.filter((c) => !c.used).sort((a, b) => b.createdAt - a.createdAt).map(couponCard).join('');
+      if (!html) html = '<div class="empty">쿠폰 없음.</div>';
+    } else if (filter === 'shop') {
+      html = shopGroups().map(([name, items]) => {
+        let s = gachaCard(items[0], items.length, name);
+        if (items.length > 1 && openStacks.has(name)) {
+          s += `<div class="stack">${items.map((g) => gachaCard(g, 1, name)).join('')}</div>`;
+        }
+        return s;
+      }).join('');
+      if (!html) html = '<div class="empty">상점 비어 있음.</div>';
+    } else {
+      const items = [
+        ...state.coupons.filter((c) => c.used).map((c) => ({ ...c, kind: 'coupon', at: c.usedAt })),
+        ...state.spends.map((x) => ({ ...x, kind: 'spend', at: x.createdAt })),
+        ...state.draws.map((x) => ({ ...x, kind: 'draw', at: x.createdAt })),
+        ...state.withdrawals.map((x) => ({ ...x, kind: 'withdraw', at: x.createdAt })),
+      ].sort((a, b) => b.at - a.at);
+      html = items.map(historyCard).join('') || '<div class="empty">내역 없음.</div>';
+    }
+    $('list').innerHTML = html;
   }
 
   // ---------- 실시간 동기화 ----------
   const onError = (err) => { state.error = err.message; render(); };
-
-  onSnapshot(couponsRef, (snap) => {
-    state.coupons = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    state.loaded = true;
-    state.error = null;
+  const listen = (ref, key) => onSnapshot(ref, (snap) => {
+    state[key] = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    if (key === 'coupons') { state.loaded = true; state.error = null; }
     render();
   }, onError);
 
-  onSnapshot(spendsRef, (snap) => {
-    state.spends = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    render();
-  }, onError);
+  listen(couponsRef, 'coupons');
+  listen(spendsRef, 'spends');
+  listen(shopRef, 'shop');
+  listen(drawsRef, 'draws');
+  listen(withdrawalsRef, 'withdrawals');
 
   onSnapshot(walletRef, (snap) => {
     const next = snap.exists() ? snap.data().balance || 0 : 0;
@@ -335,6 +538,11 @@
     state.balance = next;
     render();
   }, onError);
+
+  const readBalance = async (tx) => {
+    const wallet = await tx.get(walletRef);
+    return wallet.exists() ? wallet.data().balance || 0 : 0;
+  };
 
   // ---------- 모달 ----------
   function modal({ title, text, input = false, okText = '확인' }) {
@@ -367,10 +575,17 @@
     toastTimer = setTimeout(() => $('toast').classList.remove('show'), 2000);
   }
 
-  // ---------- 쿠폰 사용 / 삭제 ----------
+  // ---------- 목록 클릭 (쿠폰 사용 / 삭제 / 뽑기) ----------
   $('list').addEventListener('click', async (e) => {
-    const useId = e.target.dataset.use;
-    const delId = e.target.dataset.del;
+    const t = e.target.closest('button, [data-stack]');
+    if (!t) return;
+    const { use: useId, del: delId, draw: drawId, gdel: gdelId, stack } = t.dataset;
+
+    if (stack !== undefined && t.tagName !== 'BUTTON') {
+      openStacks.has(stack) ? openStacks.delete(stack) : openStacks.add(stack);
+      render();
+      return;
+    }
 
     if (useId) {
       const c = state.coupons.find((x) => x.id === useId);
@@ -388,11 +603,7 @@
           const snap = await tx.get(ref);
           if (!snap.exists() || snap.data().used) throw new Error('이미 사용된 쿠폰.');
           const data = snap.data();
-          if (data.type === 'money') {
-            const wallet = await tx.get(walletRef);
-            const balance = wallet.exists() ? wallet.data().balance || 0 : 0;
-            tx.set(walletRef, { balance: balance + data.amount });
-          }
+          if (data.type === 'money') tx.set(walletRef, { balance: (await readBalance(tx)) + data.amount });
           tx.update(ref, { used: true, usedAt: Date.now() });
         });
         toast(c.type === 'money' ? `${won(c.amount)} 충전됨.` : '사용 처리됨. 승민에게 통보할 것.');
@@ -406,21 +617,103 @@
       if (!ok) return;
       try { await deleteDoc(doc(db, 'coupons', delId)); } catch (err) { toast('삭제 실패.'); }
     }
+
+    if (gdelId) {
+      const ok = await modal({ title: '뽑기 삭제', text: '상점에서 삭제?', okText: '삭제' });
+      if (!ok) return;
+      try { await deleteDoc(doc(db, 'shop', gdelId)); } catch (err) { toast('삭제 실패.'); }
+    }
+
+    if (drawId) draw(drawId);
   });
 
-  // ---------- 잔액 사용 ----------
-  function openSpend() {
+  // ---------- 뽑기 ----------
+  async function draw(id) {
+    const g = state.shop.find((x) => x.id === id);
+    if (!g) return;
+    if (state.balance < g.price) { toast('잔액 부족.'); return; }
+    const ok = await modal({ title: `'${g.name}' 뽑기?`, text: `${won(g.price)} 차감.`, okText: '뽑기' });
+    if (!ok) return;
+
+    let picked;
+    try {
+      // 잔액 차감 → 결과 지급 → 뽑기 소진 → 기록, 한 번에
+      await runTransaction(db, async (tx) => {
+        const ref = doc(db, 'shop', id);
+        const snap = await tx.get(ref);
+        if (!snap.exists()) throw new Error('이미 소진된 뽑기.');
+        const item = snap.data();
+        const balance = await readBalance(tx);
+        if (balance < item.price) throw new Error('잔액 부족.');
+        const o = item.outcomes[item.result];
+        const payout = Math.round(item.price * o.mult);
+        picked = { item, o, payout };
+        tx.set(walletRef, { balance: balance - item.price + payout });
+        tx.delete(ref);
+        tx.set(doc(drawsRef), {
+          name: item.name, price: item.price, label: o.label, mult: o.mult, payout, createdAt: Date.now(),
+        });
+      });
+    } catch (err) {
+      toast(err.message || '실패.');
+      return;
+    }
+    spin(picked);
+  }
+
+  // 결과 연출: 보이는 결과들을 돌리다가 정해진 결과에서 멈춤
+  function spin({ item, o, payout }) {
+    const labels = item.outcomes.map((x) => `${x.label} ${multText(x.mult)}`);
+    const final = `${o.label} ${multText(o.mult)}`;
+    $('drawTitle').textContent = item.name;
+    $('drawResult').textContent = '';
+    $('drawResult').className = '';
+    $('drawOk').disabled = true;
+    $('reel').classList.remove('done');
+    $('drawBg').classList.add('show');
+
+    let i = 0;
+    let delay = 60;
+    const tick = () => {
+      if (delay > 380) {
+        $('reel').textContent = final;
+        $('reel').classList.add('done');
+        const net = payout - item.price;
+        $('drawResult').textContent = payout === 0 ? `꽝. ${won(item.price)} 날림.`
+          : net >= 0 ? `${won(payout)} 획득. (+${won(net)})` : `${won(payout)} 획득. (${won(net)})`;
+        $('drawResult').className = net >= 0 ? 'plus' : 'minus';
+        $('drawOk').disabled = false;
+        return;
+      }
+      $('reel').textContent = labels[i++ % labels.length];
+      delay *= 1.12;
+      setTimeout(tick, delay);
+    };
+    tick();
+  }
+  $('drawOk').addEventListener('click', () => $('drawBg').classList.remove('show'));
+
+  // ---------- 잔액 사용 / 출금 ----------
+  let moneyMode = 'spend';
+  function openMoney(mode) {
     if (!(state.balance > 0)) { toast('잔액 없음.'); return; }
+    moneyMode = mode;
+    const spend = mode === 'spend';
+    $('sTitle').textContent = spend ? '잔액 사용' : '출금 신청';
     $('spendText').textContent = `현재 잔액 ${won(state.balance)}`;
+    $('sMemoLabel').textContent = spend ? '사용처 (선택)' : '받을 계좌 / 메모 (선택)';
+    $('sMemo').placeholder = spend ? '예) 편의점' : '예) 카카오뱅크 3333-...';
+    $('sOk').textContent = spend ? '사용' : '신청';
     $('sAmount').value = $('sMemo').value = '';
     $('spendBg').classList.add('show');
     setTimeout(() => $('sAmount').focus(), 50);
   }
-  const closeSpend = () => $('spendBg').classList.remove('show');
+  const closeMoney = () => $('spendBg').classList.remove('show');
 
-  $('spendBtn').addEventListener('click', openSpend);
-  $('balance').addEventListener('click', openSpend);
-  $('sCancel').addEventListener('click', closeSpend);
+  $('spendBtn').addEventListener('click', () => openMoney('spend'));
+  $('balance').addEventListener('click', () => openMoney('spend'));
+  $('withdrawBtn').addEventListener('click', () => openMoney('withdraw'));
+  $('sCancel').addEventListener('click', closeMoney);
 
   $('sOk').addEventListener('click', async () => {
     const amount = Math.floor(Number($('sAmount').value));
@@ -430,16 +723,19 @@
 
     $('sOk').disabled = true;
     try {
-      // 잔액 차감과 사용 기록을 한 번에 (잔액 초과 사용 방지)
+      // 잔액 차감과 기록을 한 번에 (잔액 초과 사용 방지)
       await runTransaction(db, async (tx) => {
-        const wallet = await tx.get(walletRef);
-        const balance = wallet.exists() ? wallet.data().balance || 0 : 0;
+        const balance = await readBalance(tx);
         if (amount > balance) throw new Error('잔액 부족.');
         tx.set(walletRef, { balance: balance - amount });
-        tx.set(doc(spendsRef), { amount, memo, createdAt: Date.now() });
+        if (moneyMode === 'spend') {
+          tx.set(doc(spendsRef), { amount, memo, createdAt: Date.now() });
+        } else {
+          tx.set(doc(withdrawalsRef), { amount, memo, status: 'pending', createdAt: Date.now() });
+        }
       });
-      closeSpend();
-      toast(`${won(amount)} 사용됨.`);
+      closeMoney();
+      toast(moneyMode === 'spend' ? `${won(amount)} 사용됨.` : `${won(amount)} 출금 신청됨. 승민 처리 대기.`);
     } catch (err) {
       toast(err.message || '실패.');
     } finally {
@@ -454,6 +750,11 @@
     filter = t.dataset.filter;
     render();
   }));
+  function showTab(name) {
+    filter = name;
+    document.querySelectorAll('.tab').forEach((x) => x.classList.toggle('on', x.dataset.filter === name));
+    render();
+  }
 
   // ---------- 관리자 진입 ----------
   $('adminLink').addEventListener('click', async () => {
@@ -478,6 +779,11 @@
   });
 
   $('exitAdmin').addEventListener('click', () => setAdmin(false));
+
+  document.querySelectorAll('#adminSeg button').forEach((b) => b.addEventListener('click', () => {
+    document.querySelectorAll('#adminSeg button').forEach((x) => x.classList.toggle('on', x === b));
+    document.querySelectorAll('[data-panel]').forEach((p) => { p.hidden = p.dataset.panel !== b.dataset.pane; });
+  }));
 
   // ---------- 쿠폰 추가 ----------
   document.querySelectorAll('#typeSeg button').forEach((b) => b.addEventListener('click', () => {
@@ -506,14 +812,96 @@
         createdAt: Date.now(),
       });
       $('cTitle').value = $('cDesc').value = $('cAmount').value = '';
-      filter = 'available';
-      document.querySelectorAll('.tab').forEach((x) => x.classList.toggle('on', x.dataset.filter === 'available'));
-      render();
+      showTab('coupons');
       toast('지급 완료.');
     } catch (err) {
       toast('지급 실패.');
     } finally {
       $('addBtn').disabled = false;
+    }
+  });
+
+  // ---------- 뽑기 등록 ----------
+  function addOutcomeRow(label = '', mult = '', prob = '', real = false) {
+    const row = document.createElement('div');
+    row.className = 'orow';
+    row.innerHTML = `
+      <input class="oLabel" placeholder="예) 복사" maxlength="12" value="${esc(label)}">
+      <input class="oMult" type="number" inputmode="decimal" min="0" step="0.1" placeholder="2" value="${mult}">
+      <input class="oProb" type="number" inputmode="decimal" min="0" placeholder="30" value="${prob}">
+      <input type="radio" name="oReal" ${real ? 'checked' : ''}>
+      <button type="button" title="삭제">×</button>`;
+    row.querySelector('button').onclick = () => row.remove();
+    $('outcomes').appendChild(row);
+  }
+  function resetOutcomes() {
+    $('outcomes').innerHTML = '';
+    addOutcomeRow('복사', 2, 30);
+    addOutcomeRow('꽝', 0, 70);
+  }
+  resetOutcomes();
+  $('addOutcome').addEventListener('click', () => addOutcomeRow());
+
+  $('addGacha').addEventListener('click', async () => {
+    const name = $('gName').value.trim();
+    const price = Math.floor(Number($('gPrice').value));
+    const qty = Math.min(50, Math.max(1, Math.floor(Number($('gQty').value)) || 1));
+    const rows = [...document.querySelectorAll('#outcomes .orow')];
+    const outcomes = rows.map((r) => ({
+      label: r.querySelector('.oLabel').value.trim(),
+      mult: Number(r.querySelector('.oMult').value),
+      prob: Number(r.querySelector('.oProb').value),
+    }));
+    const result = rows.findIndex((r) => r.querySelector('input[type=radio]').checked);
+
+    if (!name) { toast('뽑기 이름 필요.'); return; }
+    if (!(price > 0)) { toast('가격 필요.'); return; }
+    if (outcomes.length < 2) { toast('결과 2개 이상 필요.'); return; }
+    if (rows.some((r) => r.querySelector('.oMult').value === '' || r.querySelector('.oProb').value === '')
+      || outcomes.some((o) => !o.label || !(o.mult >= 0) || !(o.prob >= 0))) { toast('결과 입력 확인.'); return; }
+    if (result < 0) { toast('실제 결과 선택.'); return; }
+
+    $('addGacha').disabled = true;
+    try {
+      const batch = writeBatch(db);
+      const now = Date.now();
+      for (let i = 0; i < qty; i++) {
+        batch.set(doc(shopRef), { name, price, outcomes, result, createdAt: now + i });
+      }
+      await batch.commit();
+      $('gName').value = $('gPrice').value = '';
+      $('gQty').value = 1;
+      resetOutcomes();
+      showTab('shop');
+      toast(`상점 등록 완료. (${qty}개)`);
+    } catch (err) {
+      toast('등록 실패.');
+    } finally {
+      $('addGacha').disabled = false;
+    }
+  });
+
+  // ---------- 출금 처리 (관리자) ----------
+  $('wdList').addEventListener('click', async (e) => {
+    const { wdDone, wdReject } = e.target.dataset;
+    const id = wdDone || wdReject;
+    if (!id) return;
+    const w = state.withdrawals.find((x) => x.id === id);
+    const ok = await modal(wdDone
+      ? { title: '출금 완료 처리', text: `${won(w.amount)} 송금했으면 완료.`, okText: '완료' }
+      : { title: '출금 거절', text: `${won(w.amount)} 잔액으로 환불.`, okText: '거절' });
+    if (!ok) return;
+    try {
+      await runTransaction(db, async (tx) => {
+        const ref = doc(db, 'withdrawals', id);
+        const snap = await tx.get(ref);
+        if (!snap.exists() || snap.data().status !== 'pending') throw new Error('이미 처리됨.');
+        if (wdReject) tx.set(walletRef, { balance: (await readBalance(tx)) + snap.data().amount });
+        tx.update(ref, { status: wdDone ? 'done' : 'rejected', doneAt: Date.now() });
+      });
+      toast(wdDone ? '출금 완료 처리됨.' : '거절됨. 환불 완료.');
+    } catch (err) {
+      toast(err.message || '실패.');
     }
   });
 
