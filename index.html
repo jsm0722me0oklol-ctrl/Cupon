@@ -166,6 +166,13 @@
     padding: 11px 14px; font-size: 14px; margin-bottom: 16px; word-break: break-all;
   }
   .real-ctl { display: flex; align-items: center; gap: 6px; }
+  .attend {
+    background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+    padding: 14px 16px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+  .attend b { display: block; font-size: 15px; }
+  .attend small { color: var(--muted); font-size: 12px; }
+  .attend button { flex-shrink: 0; padding: 10px 16px; }
 
   /* 모달 / 토스트 */
   .modal-bg {
@@ -303,6 +310,11 @@
       <input id="setNotice" placeholder="예) 이번 주 뽑기 이벤트." maxlength="100">
       <div class="btnrow"><button class="primary" id="saveNotice">저장</button></div>
 
+      <h4>출석체크 보상</h4>
+      <label for="setAttend">하루 1번 출석 시 지급 (0이면 출석체크 숨김)</label>
+      <input id="setAttend" type="number" inputmode="numeric" min="0" placeholder="예) 1000">
+      <div class="btnrow"><button class="primary" id="saveAttend">저장</button></div>
+
       <h4>기능 잠금</h4>
       <label class="toggle">잔액 사용 잠금 <input type="checkbox" data-lock="spend"></label>
       <label class="toggle">출금 잠금 <input type="checkbox" data-lock="withdraw"></label>
@@ -325,6 +337,11 @@
   </div>
 
   <div class="notice" id="notice" hidden></div>
+
+  <div class="attend" id="attend" hidden>
+    <span><b id="attendTitle"></b><small id="attendSub"></small></span>
+    <button class="primary" id="attendBtn">출석</button>
+  </div>
 
   <div class="actions">
     <button class="primary" id="spendBtn">잔액 사용</button>
@@ -410,6 +427,7 @@
   const adminRef = doc(db, 'meta', 'admin');
   const settingsRef = doc(db, 'meta', 'settings');
   const adjustmentsRef = collection(db, 'adjustments');
+  const attendanceRef = collection(db, 'attendance');
   const DEFAULT_TITLE = '사용자: 최요셉';
   const DEFAULT_SUB = '쿠폰 지급됨.';
 
@@ -417,7 +435,7 @@
   const $ = (id) => document.getElementById(id);
 
   const state = {
-    coupons: [], spends: [], shop: [], draws: [], withdrawals: [], adjustments: [], settings: {},
+    coupons: [], spends: [], shop: [], draws: [], withdrawals: [], adjustments: [], attendance: [], settings: {},
     balance: 0, loaded: false, error: null,
   };
   let filter = 'coupons';
@@ -525,6 +543,17 @@
           </div>
         </div>`;
     }
+    if (h.kind === 'attend') {
+      return `
+        <div class="coupon money">
+          <div class="side">+${won(h.amount)}</div>
+          <div class="body">
+            <div class="title">출석체크</div>
+            <div class="desc">출석 보상 지급.</div>
+            <div class="row"><span class="date">${fmtDate(h.at)} 출석</span></div>
+          </div>
+        </div>`;
+    }
     if (h.kind === 'adjust') {
       return `
         <div class="coupon ${h.amount >= 0 ? 'money' : 'dark'}">
@@ -596,6 +625,8 @@
       ['출금 대기', won(sum(wdPending, (w) => w.amount))],
       ['상점 남은 뽑기', `${state.shop.length}개`],
       ['일반 쿠폰 사용', `${state.coupons.filter((c) => c.used && c.type !== 'money').length}장`],
+      ['출석 일수', `${state.attendance.length}일`],
+      ['출석 보상 지급', won(sum(state.attendance, (a) => a.amount))],
     ];
     $('stats').innerHTML = stats.map(([k, v]) => `<div class="stat"><small>${k}</small><b>${v}</b></div>`).join('');
   }
@@ -606,6 +637,7 @@
     $('helloSub').textContent = state.settings.sub || DEFAULT_SUB;
     $('notice').hidden = !state.settings.notice;
     $('notice').textContent = state.settings.notice || '';
+    renderAttend();
     if (isAdmin) renderStats();
     renderAdmin();
 
@@ -639,6 +671,7 @@
         ...state.draws.map((x) => ({ ...x, kind: 'draw', at: x.createdAt })),
         ...state.withdrawals.map((x) => ({ ...x, kind: 'withdraw', at: x.createdAt })),
         ...state.adjustments.map((x) => ({ ...x, kind: 'adjust', at: x.createdAt })),
+        ...state.attendance.map((x) => ({ ...x, kind: 'attend', at: x.createdAt })),
       ].sort((a, b) => b.at - a.at);
       html = items.map(historyCard).join('') || '<div class="empty">내역 없음.</div>';
     }
@@ -659,6 +692,7 @@
   listen(drawsRef, 'draws');
   listen(withdrawalsRef, 'withdrawals');
   listen(adjustmentsRef, 'adjustments');
+  listen(attendanceRef, 'attendance');
 
   // 설정 (문구, 공지, 잠금)
   onSnapshot(settingsRef, (snap) => {
@@ -668,6 +702,7 @@
     if (document.activeElement !== $('setTitle')) $('setTitle').value = state.settings.title || '';
     if (document.activeElement !== $('setSub')) $('setSub').value = state.settings.sub || '';
     if (document.activeElement !== $('setNotice')) $('setNotice').value = state.settings.notice || '';
+    if (document.activeElement !== $('setAttend')) $('setAttend').value = state.settings.attendReward || '';
     render();
   }, onError);
 
@@ -879,6 +914,44 @@
     tick();
   }
   $('drawOk').addEventListener('click', () => $('drawBg').classList.remove('show'));
+
+  // ---------- 출석체크 ----------
+  // 기기 날짜 기준 하루 1번. 날짜를 문서 ID로 써서 여러 기기에서 눌러도 하루 한 번만 지급
+  const todayKey = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+
+  function renderAttend() {
+    const reward = state.settings.attendReward || 0;
+    $('attend').hidden = !(reward > 0) || !state.loaded;
+    if ($('attend').hidden) return;
+    const done = state.attendance.some((a) => a.id === todayKey());
+    $('attendTitle').textContent = done ? '오늘 출석 완료.' : `출석체크 +${won(reward)}`;
+    $('attendSub').textContent = `누적 ${state.attendance.length}일`;
+    $('attendBtn').disabled = done;
+    $('attendBtn').textContent = done ? '완료' : '출석';
+  }
+
+  $('attendBtn').addEventListener('click', async () => {
+    const reward = state.settings.attendReward || 0;
+    if (!(reward > 0)) return;
+    const key = todayKey();
+    $('attendBtn').disabled = true;
+    try {
+      await runTransaction(db, async (tx) => {
+        const ref = doc(db, 'attendance', key);
+        if ((await tx.get(ref)).exists()) throw new Error('오늘 이미 출석.');
+        const balance = await readBalance(tx);
+        tx.set(ref, { amount: reward, createdAt: Date.now() });
+        tx.set(walletRef, { balance: balance + reward });
+      });
+      toast(`출석 완료. ${won(reward)} 지급됨.`);
+    } catch (err) {
+      toast(err.message || '실패.');
+      renderAttend();
+    }
+  });
 
   // ---------- 잔액 사용 / 출금 ----------
   let moneyMode = 'spend';
@@ -1131,6 +1204,13 @@
   }
   $('saveHello').addEventListener('click', () => saveSettings(
     { title: $('setTitle').value.trim(), sub: $('setSub').value.trim() }, '문구 저장됨.'));
+  $('saveAttend').addEventListener('click', () => {
+    const v = $('setAttend').value;
+    const attendReward = Math.floor(Number(v));
+    if (v === '' || !(attendReward >= 0)) { toast('금액 필요.'); return; }
+    saveSettings({ attendReward }, attendReward ? `출석 보상 ${won(attendReward)}.` : '출석체크 숨김.');
+  });
+
   $('saveNotice').addEventListener('click', () => {
     const notice = $('setNotice').value.trim();
     saveSettings({ notice }, notice ? '공지 게시됨.' : '공지 숨김.');
@@ -1162,6 +1242,7 @@
       ...state.draws.map((x) => doc(db, 'draws', x.id)),
       ...state.withdrawals.map((x) => doc(db, 'withdrawals', x.id)),
       ...state.adjustments.map((x) => doc(db, 'adjustments', x.id)),
+      ...state.attendance.map((x) => doc(db, 'attendance', x.id)),
       walletRef,
     ];
     try {
