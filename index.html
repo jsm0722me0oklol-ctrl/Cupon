@@ -149,6 +149,24 @@
   .wd small { color: var(--muted); font-size: 12px; word-break: break-all; }
   .wd > span:last-child { display: flex; gap: 6px; flex-shrink: 0; }
 
+  #adminSeg { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  #adminSeg button { padding: 9px 0; font-size: 13px; }
+  .panel h4 { font-size: 14px; margin: 22px 0 2px; }
+  .panel h4:first-child { margin-top: 14px; }
+  .btnrow { display: flex; gap: 8px; margin-top: 10px; }
+  .btnrow button { flex: 1; padding: 11px; }
+  .toggle { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; font-size: 14px; }
+  .toggle input { width: 20px; height: 20px; accent-color: var(--danger); }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+  .stat { background: var(--bg); border-radius: 12px; padding: 12px; }
+  .stat small { display: block; color: var(--muted); font-size: 12px; margin-bottom: 4px; }
+  .stat b { font-size: 16px; }
+  .notice {
+    background: #fff4e5; border: 1px solid #ffd9a8; color: #8a4b00; border-radius: 12px;
+    padding: 11px 14px; font-size: 14px; margin-bottom: 16px; word-break: break-all;
+  }
+  .real-ctl { display: flex; align-items: center; gap: 6px; }
+
   /* 모달 / 토스트 */
   .modal-bg {
     position: fixed; inset: 0; background: rgba(0,0,0,.35);
@@ -200,6 +218,8 @@
       <button type="button" data-pane="coupon" class="on">쿠폰</button>
       <button type="button" data-pane="gacha">뽑기</button>
       <button type="button" data-pane="withdraw" id="wdSegBtn">출금</button>
+      <button type="button" data-pane="stats">통계</button>
+      <button type="button" data-pane="settings">설정</button>
     </div>
 
     <!-- 쿠폰 지급 -->
@@ -216,7 +236,9 @@
         <input id="cAmount" type="number" inputmode="numeric" min="1" placeholder="예) 10000">
       </div>
       <label for="cDesc">설명 (선택)</label>
-      <input id="cDesc" placeholder="예) 유효기간 없음" maxlength="80">
+      <input id="cDesc" placeholder="예) 아무 때나" maxlength="80">
+      <label for="cExpire">유효기간 (선택)</label>
+      <input id="cExpire" type="date">
       <button class="primary wide" id="addBtn">지급</button>
     </div>
 
@@ -245,12 +267,64 @@
     <div data-panel="withdraw" hidden>
       <div id="wdList"></div>
     </div>
+
+    <!-- 통계 -->
+    <div data-panel="stats" hidden>
+      <div class="stats" id="stats"></div>
+    </div>
+
+    <!-- 설정 -->
+    <div data-panel="settings" hidden>
+      <h4>잔액 조정</h4>
+      <div class="two">
+        <div>
+          <label for="adjAmount">금액 (원)</label>
+          <input id="adjAmount" type="number" inputmode="numeric" min="1" placeholder="5000">
+        </div>
+        <div>
+          <label for="adjMemo">사유 (선택)</label>
+          <input id="adjMemo" placeholder="예) 보너스" maxlength="30">
+        </div>
+      </div>
+      <div class="btnrow">
+        <button class="ghost danger" id="adjMinus">차감</button>
+        <button class="primary" id="adjPlus">지급</button>
+      </div>
+
+      <h4>상단 문구</h4>
+      <label for="setTitle">제목</label>
+      <input id="setTitle" placeholder="사용자: 최요셉" maxlength="30">
+      <label for="setSub">부제</label>
+      <input id="setSub" placeholder="쿠폰 지급됨." maxlength="60">
+      <div class="btnrow"><button class="primary" id="saveHello">저장</button></div>
+
+      <h4>공지</h4>
+      <label for="setNotice">비우고 저장하면 숨김</label>
+      <input id="setNotice" placeholder="예) 이번 주 뽑기 이벤트." maxlength="100">
+      <div class="btnrow"><button class="primary" id="saveNotice">저장</button></div>
+
+      <h4>기능 잠금</h4>
+      <label class="toggle">잔액 사용 잠금 <input type="checkbox" data-lock="spend"></label>
+      <label class="toggle">출금 잠금 <input type="checkbox" data-lock="withdraw"></label>
+      <label class="toggle">상점 잠금 <input type="checkbox" data-lock="shop"></label>
+
+      <h4>비밀번호 변경</h4>
+      <label for="newPin">새 비밀번호</label>
+      <input id="newPin" type="password" inputmode="numeric" maxlength="12">
+      <div class="btnrow"><button class="primary" id="savePin">변경</button></div>
+
+      <h4>전체 초기화</h4>
+      <label>쿠폰, 상점, 내역, 잔액 전부 삭제. 비밀번호와 설정은 유지.</label>
+      <div class="btnrow"><button class="ghost danger" id="resetAll">전체 초기화</button></div>
+    </div>
   </section>
 
   <div class="hello">
-    <h1>사용자: 최요셉</h1>
-    <p>쿠폰 지급됨.</p>
+    <h1 id="helloTitle">사용자: 최요셉</h1>
+    <p id="helloSub">쿠폰 지급됨.</p>
   </div>
+
+  <div class="notice" id="notice" hidden></div>
 
   <div class="actions">
     <button class="primary" id="spendBtn">잔액 사용</button>
@@ -315,7 +389,7 @@
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
   import {
-    getFirestore, collection, doc, onSnapshot, addDoc, deleteDoc, getDoc, setDoc, runTransaction, writeBatch,
+    getFirestore, collection, doc, onSnapshot, addDoc, deleteDoc, getDoc, setDoc, updateDoc, runTransaction, writeBatch,
   } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
   const firebaseConfig = {
@@ -334,12 +408,16 @@
   const withdrawalsRef = collection(db, 'withdrawals');
   const walletRef = doc(db, 'meta', 'wallet');
   const adminRef = doc(db, 'meta', 'admin');
+  const settingsRef = doc(db, 'meta', 'settings');
+  const adjustmentsRef = collection(db, 'adjustments');
+  const DEFAULT_TITLE = '사용자: 최요셉';
+  const DEFAULT_SUB = '쿠폰 지급됨.';
 
   const ADMIN_KEY = 'seungmin-coupon-admin';
   const $ = (id) => document.getElementById(id);
 
   const state = {
-    coupons: [], spends: [], shop: [], draws: [], withdrawals: [],
+    coupons: [], spends: [], shop: [], draws: [], withdrawals: [], adjustments: [], settings: {},
     balance: 0, loaded: false, error: null,
   };
   let filter = 'coupons';
@@ -368,18 +446,29 @@
   }
 
   // ---------- 렌더링 ----------
+  const isExpired = (c) => !c.used && c.expiresAt && Date.now() > c.expiresAt;
+  const locked = (k) => !!(state.settings.lock && state.settings.lock[k]);
+
+  function couponDate(c) {
+    if (c.used) return fmtDate(c.usedAt) + ' 사용';
+    if (isExpired(c)) return fmtDate(c.expiresAt) + ' 만료';
+    return fmtDate(c.createdAt) + ' 받음' + (c.expiresAt ? ` · ~${fmtDate(c.expiresAt)}` : '');
+  }
+
   function couponCard(c) {
+    const expired = isExpired(c);
     return `
-      <div class="coupon ${c.type === 'money' ? 'money' : ''} ${c.used ? 'used' : ''}">
+      <div class="coupon ${c.type === 'money' ? 'money' : ''} ${c.used || expired ? 'used' : ''}">
         <div class="side">${c.type === 'money' ? won(c.amount) : 'COUPON'}</div>
         <div class="body">
           <div class="title">${esc(c.title)}</div>
           <div class="desc">${c.desc ? esc(c.desc) : (c.type === 'money' ? '사용 시 잔액 반영.' : '&nbsp;')}</div>
           <div class="row">
-            <span class="date">${c.used ? fmtDate(c.usedAt) + ' 사용' : fmtDate(c.createdAt) + ' 받음'}</span>
+            <span class="date">${couponDate(c)}</span>
             <span>
+              ${isAdmin && c.used ? `<button class="ghost" data-undo="${c.id}">되돌리기</button>` : ''}
               ${isAdmin ? `<button class="ghost danger" data-del="${c.id}">삭제</button>` : ''}
-              ${c.used ? '' : `<button class="primary" data-use="${c.id}">사용</button>`}
+              ${c.used || expired ? '' : `<button class="primary" data-use="${c.id}">사용</button>`}
             </span>
           </div>
         </div>
@@ -400,7 +489,7 @@
           <div class="title">${esc(g.name)}${stacked ? `<span class="count">×${count}</span>` : ''}</div>
           ${oddsHtml(g)}
           <div class="row">
-            <span class="date">${stacked ? (openStacks.has(key) ? '접기 ▲' : '펼치기 ▼') : (isAdmin ? '실제: ' + esc(g.outcomes[g.result].label) : '')}</span>
+            <span class="date">${stacked ? (openStacks.has(key) ? '접기 ▲' : '펼치기 ▼') : (isAdmin ? `<span class="real-ctl">실제: ${esc(g.outcomes[g.result].label)} <button class="ghost" data-gres="${g.id}">변경</button></span>` : '')}</span>
             <span>
               ${isAdmin && !stacked ? `<button class="ghost danger" data-gdel="${g.id}">삭제</button>` : ''}
               <button class="primary" data-draw="${g.id}">뽑기</button>
@@ -432,6 +521,17 @@
             <div class="title">${esc(h.name)}</div>
             <div class="desc">-${won(h.price)} / +${won(h.payout)} → <b class="${net >= 0 ? 'plus' : 'minus'}">${net >= 0 ? '+' : ''}${won(net)}</b></div>
             <div class="row"><span class="date">${fmtDate(h.at)} 뽑기</span></div>
+          </div>
+        </div>`;
+    }
+    if (h.kind === 'adjust') {
+      return `
+        <div class="coupon ${h.amount >= 0 ? 'money' : 'dark'}">
+          <div class="side">${h.amount >= 0 ? '+' : '-'}${won(Math.abs(h.amount))}</div>
+          <div class="body">
+            <div class="title">${h.memo ? esc(h.memo) : (h.amount >= 0 ? '관리자 지급' : '관리자 차감')}</div>
+            <div class="desc">${h.amount >= 0 ? '잔액 지급.' : '잔액 차감.'}</div>
+            <div class="row"><span class="date">${fmtDate(h.at)}</span></div>
           </div>
         </div>`;
     }
@@ -475,8 +575,37 @@
       : '<div class="empty" style="padding:24px 0">대기 중인 출금 없음.</div>';
   }
 
+  function renderStats() {
+    const sum = (arr, f) => arr.reduce((a, x) => a + f(x), 0);
+    const usedMoney = state.coupons.filter((c) => c.used && c.type === 'money');
+    const bet = sum(state.draws, (d) => d.price);
+    const paid = sum(state.draws, (d) => d.payout);
+    const wdDone = state.withdrawals.filter((w) => w.status === 'done');
+    const wdPending = state.withdrawals.filter((w) => w.status === 'pending');
+    const stats = [
+      ['현재 잔액', won(state.balance)],
+      ['미사용 쿠폰', `${state.coupons.filter((c) => !c.used && !isExpired(c)).length}장`],
+      ['머니 쿠폰 충전', won(sum(usedMoney, (c) => c.amount))],
+      ['관리자 조정', won(sum(state.adjustments, (a) => a.amount))],
+      ['잔액 사용', won(sum(state.spends, (x) => x.amount))],
+      ['뽑기 횟수', `${state.draws.length}회`],
+      ['뽑기 베팅 / 지급', `${won(bet)} / ${won(paid)}`],
+      ['승민 뽑기 수익', won(bet - paid)],
+      ['출금 완료', won(sum(wdDone, (w) => w.amount))],
+      ['출금 대기', won(sum(wdPending, (w) => w.amount))],
+      ['상점 남은 뽑기', `${state.shop.length}개`],
+      ['일반 쿠폰 사용', `${state.coupons.filter((c) => c.used && c.type !== 'money').length}장`],
+    ];
+    $('stats').innerHTML = stats.map(([k, v]) => `<div class="stat"><small>${k}</small><b>${v}</b></div>`).join('');
+  }
+
   function render() {
     $('balanceVal').textContent = won(state.balance);
+    $('helloTitle').textContent = state.settings.title || DEFAULT_TITLE;
+    $('helloSub').textContent = state.settings.sub || DEFAULT_SUB;
+    $('notice').hidden = !state.settings.notice;
+    $('notice').textContent = state.settings.notice || '';
+    if (isAdmin) renderStats();
     renderAdmin();
 
     if (state.error) {
@@ -501,12 +630,14 @@
         return s;
       }).join('');
       if (!html) html = '<div class="empty">상점 비어 있음.</div>';
+      if (locked('shop')) html = isAdmin ? '<div class="notice">상점 잠김. 요셉에게는 닫힘으로 보임.</div>' + html : '<div class="empty">상점 닫힘.</div>';
     } else {
       const items = [
         ...state.coupons.filter((c) => c.used).map((c) => ({ ...c, kind: 'coupon', at: c.usedAt })),
         ...state.spends.map((x) => ({ ...x, kind: 'spend', at: x.createdAt })),
         ...state.draws.map((x) => ({ ...x, kind: 'draw', at: x.createdAt })),
         ...state.withdrawals.map((x) => ({ ...x, kind: 'withdraw', at: x.createdAt })),
+        ...state.adjustments.map((x) => ({ ...x, kind: 'adjust', at: x.createdAt })),
       ].sort((a, b) => b.at - a.at);
       html = items.map(historyCard).join('') || '<div class="empty">내역 없음.</div>';
     }
@@ -526,6 +657,18 @@
   listen(shopRef, 'shop');
   listen(drawsRef, 'draws');
   listen(withdrawalsRef, 'withdrawals');
+  listen(adjustmentsRef, 'adjustments');
+
+  // 설정 (문구, 공지, 잠금)
+  onSnapshot(settingsRef, (snap) => {
+    state.settings = snap.exists() ? snap.data() : {};
+    const lock = state.settings.lock || {};
+    document.querySelectorAll('[data-lock]').forEach((el) => { el.checked = !!lock[el.dataset.lock]; });
+    if (document.activeElement !== $('setTitle')) $('setTitle').value = state.settings.title || '';
+    if (document.activeElement !== $('setSub')) $('setSub').value = state.settings.sub || '';
+    if (document.activeElement !== $('setNotice')) $('setNotice').value = state.settings.notice || '';
+    render();
+  }, onError);
 
   onSnapshot(walletRef, (snap) => {
     const next = snap.exists() ? snap.data().balance || 0 : 0;
@@ -543,12 +686,14 @@
   };
 
   // ---------- 모달 ----------
-  function modal({ title, text, input = false, okText = '확인' }) {
+  function modal({ title, text, input = false, okText = '확인', plain = false }) {
     return new Promise((resolve) => {
       $('mTitle').textContent = title;
       $('mText').textContent = text;
       $('mInput').hidden = !input;
       $('mInput').value = '';
+      $('mInput').type = plain ? 'text' : 'password';
+      $('mInput').inputMode = plain ? 'text' : 'numeric';
       $('mErr').hidden = true;
       $('mOk').textContent = okText;
       $('modalBg').classList.add('show');
@@ -577,7 +722,7 @@
   $('list').addEventListener('click', async (e) => {
     const t = e.target.closest('button, [data-stack]');
     if (!t) return;
-    const { use: useId, del: delId, draw: drawId, gdel: gdelId, stack } = t.dataset;
+    const { use: useId, del: delId, draw: drawId, gdel: gdelId, stack, undo: undoId, gres: gresId } = t.dataset;
 
     if (stack !== undefined && t.tagName !== 'BUTTON') {
       openStacks.has(stack) ? openStacks.delete(stack) : openStacks.add(stack);
@@ -601,6 +746,7 @@
           const snap = await tx.get(ref);
           if (!snap.exists() || snap.data().used) throw new Error('이미 사용된 쿠폰.');
           const data = snap.data();
+          if (data.expiresAt && Date.now() > data.expiresAt) throw new Error('만료된 쿠폰.');
           if (data.type === 'money') tx.set(walletRef, { balance: (await readBalance(tx)) + data.amount });
           tx.update(ref, { used: true, usedAt: Date.now() });
         });
@@ -623,12 +769,54 @@
     }
 
     if (drawId) draw(drawId);
+
+    if (undoId) {
+      const c = state.coupons.find((x) => x.id === undoId);
+      if (!c) return;
+      const ok = await modal({
+        title: '사용 되돌리기',
+        text: c.type === 'money' ? `미사용으로 복구. 잔액에서 ${won(c.amount)} 회수.` : '미사용으로 복구.',
+        okText: '되돌리기',
+      });
+      if (!ok) return;
+      try {
+        await runTransaction(db, async (tx) => {
+          const ref = doc(db, 'coupons', undoId);
+          const snap = await tx.get(ref);
+          if (!snap.exists() || !snap.data().used) throw new Error('이미 미사용.');
+          const data = snap.data();
+          if (data.type === 'money') {
+            const balance = await readBalance(tx);
+            if (balance < data.amount) throw new Error('잔액 부족. 회수 불가.');
+            tx.set(walletRef, { balance: balance - data.amount });
+          }
+          tx.update(ref, { used: false, usedAt: null });
+        });
+        toast('되돌림.');
+      } catch (err) {
+        toast(err.message || '실패.');
+      }
+    }
+
+    if (gresId) {
+      // 실제 결과를 다음 항목으로 순환
+      const g = state.shop.find((x) => x.id === gresId);
+      if (!g) return;
+      const result = (g.result + 1) % g.outcomes.length;
+      try {
+        await updateDoc(doc(db, 'shop', gresId), { result });
+        toast(`실제 결과: ${g.outcomes[result].label}`);
+      } catch (err) {
+        toast('변경 실패.');
+      }
+    }
   });
 
   // ---------- 뽑기 ----------
   async function draw(id) {
     const g = state.shop.find((x) => x.id === id);
     if (!g) return;
+    if (locked('shop')) { toast('상점 닫힘.'); return; }
     if (state.balance < g.price) { toast('잔액 부족.'); return; }
     const ok = await modal({ title: `'${g.name}' 뽑기?`, text: `${won(g.price)} 차감.`, okText: '뽑기' });
     if (!ok) return;
@@ -694,6 +882,7 @@
   // ---------- 잔액 사용 / 출금 ----------
   let moneyMode = 'spend';
   function openMoney(mode) {
+    if (locked(mode)) { toast('현재 사용 불가.'); return; }
     if (!(state.balance > 0)) { toast('잔액 없음.'); return; }
     moneyMode = mode;
     const spend = mode === 'spend';
@@ -795,8 +984,12 @@
     const title = $('cTitle').value.trim();
     const desc = $('cDesc').value.trim();
     const amount = Math.floor(Number($('cAmount').value));
+    const expire = $('cExpire').value;
+    // 선택한 날짜의 23:59:59까지 사용 가능
+    const expiresAt = expire ? new Date(expire + 'T23:59:59').getTime() : null;
 
     if (!title) { toast('쿠폰 이름 필요.'); return; }
+    if (expiresAt && expiresAt < Date.now()) { toast('유효기간이 이미 지남.'); return; }
     if (newType === 'money' && !(amount > 0)) { toast('금액 필요.'); return; }
 
     $('addBtn').disabled = true;
@@ -808,8 +1001,9 @@
         amount: newType === 'money' ? amount : 0,
         used: false,
         createdAt: Date.now(),
+        expiresAt,
       });
-      $('cTitle').value = $('cDesc').value = $('cAmount').value = '';
+      $('cTitle').value = $('cDesc').value = $('cAmount').value = $('cExpire').value = '';
       showTab('coupons');
       toast('지급 완료.');
     } catch (err) {
@@ -900,6 +1094,85 @@
       toast(wdDone ? '출금 완료 처리됨.' : '거절됨. 환불 완료.');
     } catch (err) {
       toast(err.message || '실패.');
+    }
+  });
+
+  // ---------- 설정 (관리자) ----------
+  async function adjust(sign) {
+    const amount = Math.floor(Number($('adjAmount').value));
+    const memo = $('adjMemo').value.trim();
+    if (!(amount > 0)) { toast('금액 필요.'); return; }
+    const ok = await modal({ title: sign > 0 ? '잔액 지급' : '잔액 차감', text: `${won(amount)} ${sign > 0 ? '지급' : '차감'}.`, okText: '확인' });
+    if (!ok) return;
+    try {
+      await runTransaction(db, async (tx) => {
+        const balance = await readBalance(tx);
+        if (sign < 0 && balance < amount) throw new Error('잔액 부족.');
+        tx.set(walletRef, { balance: balance + sign * amount });
+        tx.set(doc(adjustmentsRef), { amount: sign * amount, memo, createdAt: Date.now() });
+      });
+      $('adjAmount').value = $('adjMemo').value = '';
+      toast(sign > 0 ? `${won(amount)} 지급됨.` : `${won(amount)} 차감됨.`);
+    } catch (err) {
+      toast(err.message || '실패.');
+    }
+  }
+  $('adjPlus').addEventListener('click', () => adjust(1));
+  $('adjMinus').addEventListener('click', () => adjust(-1));
+
+  async function saveSettings(patch, msg) {
+    try {
+      await setDoc(settingsRef, patch, { merge: true });
+      toast(msg);
+    } catch (err) {
+      toast('저장 실패.');
+    }
+  }
+  $('saveHello').addEventListener('click', () => saveSettings(
+    { title: $('setTitle').value.trim(), sub: $('setSub').value.trim() }, '문구 저장됨.'));
+  $('saveNotice').addEventListener('click', () => {
+    const notice = $('setNotice').value.trim();
+    saveSettings({ notice }, notice ? '공지 게시됨.' : '공지 숨김.');
+  });
+  document.querySelectorAll('[data-lock]').forEach((el) => el.addEventListener('change', () => {
+    saveSettings({ lock: { [el.dataset.lock]: el.checked } }, el.checked ? '잠금.' : '잠금 해제.');
+  }));
+
+  $('savePin').addEventListener('click', async () => {
+    const pin = $('newPin').value;
+    if (!pin) { toast('새 비밀번호 필요.'); return; }
+    try {
+      await setDoc(adminRef, { pinHash: await sha256(pin) });
+      $('newPin').value = '';
+      toast('비밀번호 변경됨.');
+    } catch (err) {
+      toast('변경 실패.');
+    }
+  });
+
+  $('resetAll').addEventListener('click', async () => {
+    const typed = await modal({ title: '전체 초기화', text: "되돌릴 수 없음. '초기화' 입력.", input: true, plain: true, okText: '초기화' });
+    if (typed === null) return;
+    if (typed !== '초기화') { toast('입력 불일치.'); return; }
+    const targets = [
+      ...state.coupons.map((x) => doc(db, 'coupons', x.id)),
+      ...state.spends.map((x) => doc(db, 'spends', x.id)),
+      ...state.shop.map((x) => doc(db, 'shop', x.id)),
+      ...state.draws.map((x) => doc(db, 'draws', x.id)),
+      ...state.withdrawals.map((x) => doc(db, 'withdrawals', x.id)),
+      ...state.adjustments.map((x) => doc(db, 'adjustments', x.id)),
+      walletRef,
+    ];
+    try {
+      // 배치 한도(500)를 넘지 않게 나눠서 삭제
+      for (let i = 0; i < targets.length; i += 400) {
+        const batch = writeBatch(db);
+        targets.slice(i, i + 400).forEach((ref) => batch.delete(ref));
+        await batch.commit();
+      }
+      toast('초기화 완료.');
+    } catch (err) {
+      toast('초기화 실패.');
     }
   });
 
