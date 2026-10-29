@@ -134,7 +134,7 @@
 
   .outcomes { display: flex; flex-direction: column; gap: 6px; }
   .orow, .ohead {
-    display: grid; grid-template-columns: 1fr 58px 58px 34px 30px; gap: 6px; align-items: center;
+    display: grid; grid-template-columns: 1fr 78px 52px 34px 30px; gap: 6px; align-items: center;
   }
   .ohead { font-size: 11px; color: var(--muted); }
   .ohead span:nth-child(n+2) { text-align: center; }
@@ -188,7 +188,7 @@
   .modal .field input { margin-bottom: 10px; }
 
   .reel {
-    font-size: 34px; font-weight: 800; height: 64px; display: flex; align-items: center; justify-content: center;
+    font-size: 26px; font-weight: 800; min-height: 64px; padding: 8px; text-align: center; word-break: keep-all; display: flex; align-items: center; justify-content: center;
     background: var(--bg); border-radius: 14px; margin: 6px 0 12px; color: var(--gacha);
   }
   .reel.done { animation: pop .3s; }
@@ -257,7 +257,7 @@
         </div>
       </div>
       <label>결과 목록</label>
-      <div class="ohead"><span>이름</span><span>배율</span><span>확률%</span><span>실제</span><span></span></div>
+      <div class="ohead"><span>이름</span><span>받는 돈</span><span>확률%</span><span>실제</span><span></span></div>
       <div class="outcomes" id="outcomes"></div>
       <button type="button" class="ghost addrow" id="addOutcome">+ 결과 추가</button>
       <button class="primary wide" id="addGacha">상점에 등록</button>
@@ -432,7 +432,8 @@
     return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
   };
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const multText = (m) => '×' + m;
+  // 결과로 받는 돈. 예전 뽑기는 배율(mult)로 저장돼 있어 가격 × 배율로 계산
+  const payoutOf = (o, price) => (o.payout != null ? o.payout : Math.round(price * o.mult));
 
   async function sha256(text) {
     const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('seungmin-coupon:' + text));
@@ -477,7 +478,7 @@
 
   function oddsHtml(g) {
     return `<div class="odds">${g.outcomes.map((o, i) => `
-      <span class="${isAdmin && i === g.result ? 'real' : ''}">${esc(o.label)} ${multText(o.mult)} · ${o.prob}%</span>`).join('')}</div>`;
+      <span class="${isAdmin && i === g.result ? 'real' : ''}">${esc(o.label)} ${won(payoutOf(o, g.price))} · ${o.prob}%</span>`).join('')}</div>`;
   }
 
   function gachaCard(g, count, key) {
@@ -516,7 +517,7 @@
       const net = h.payout - h.price;
       return `
         <div class="coupon gacha">
-          <div class="side">${esc(h.label)}<br>${multText(h.mult)}</div>
+          <div class="side">${esc(h.label)}<br>${won(h.payout)}</div>
           <div class="body">
             <div class="title">${esc(h.name)}</div>
             <div class="desc">-${won(h.price)} / +${won(h.payout)} → <b class="${net >= 0 ? 'plus' : 'minus'}">${net >= 0 ? '+' : ''}${won(net)}</b></div>
@@ -832,12 +833,12 @@
         const balance = await readBalance(tx);
         if (balance < item.price) throw new Error('잔액 부족.');
         const o = item.outcomes[item.result];
-        const payout = Math.round(item.price * o.mult);
+        const payout = payoutOf(o, item.price);
         picked = { item, o, payout };
         tx.set(walletRef, { balance: balance - item.price + payout });
         tx.delete(ref);
         tx.set(doc(drawsRef), {
-          name: item.name, price: item.price, label: o.label, mult: o.mult, payout, createdAt: Date.now(),
+          name: item.name, price: item.price, label: o.label, payout, createdAt: Date.now(),
         });
       });
     } catch (err) {
@@ -849,8 +850,8 @@
 
   // 결과 연출: 보이는 결과들을 돌리다가 정해진 결과에서 멈춤
   function spin({ item, o, payout }) {
-    const labels = item.outcomes.map((x) => `${x.label} ${multText(x.mult)}`);
-    const final = `${o.label} ${multText(o.mult)}`;
+    const labels = item.outcomes.map((x) => `${x.label} ${won(payoutOf(x, item.price))}`);
+    const final = `${o.label} ${won(payout)}`;
     $('drawTitle').textContent = item.name;
     $('drawResult').textContent = '';
     $('drawResult').className = '';
@@ -1014,12 +1015,12 @@
   });
 
   // ---------- 뽑기 등록 ----------
-  function addOutcomeRow(label = '', mult = '', prob = '', real = false) {
+  function addOutcomeRow(label = '', payout = '', prob = '', real = false) {
     const row = document.createElement('div');
     row.className = 'orow';
     row.innerHTML = `
       <input class="oLabel" placeholder="예) 복사" maxlength="12" value="${esc(label)}">
-      <input class="oMult" type="number" inputmode="decimal" min="0" step="0.1" placeholder="2" value="${mult}">
+      <input class="oPay" type="number" inputmode="numeric" min="0" placeholder="2000" value="${payout}">
       <input class="oProb" type="number" inputmode="decimal" min="0" placeholder="30" value="${prob}">
       <input type="radio" name="oReal" ${real ? 'checked' : ''}>
       <button type="button" title="삭제">×</button>`;
@@ -1028,7 +1029,7 @@
   }
   function resetOutcomes() {
     $('outcomes').innerHTML = '';
-    addOutcomeRow('복사', 2, 30);
+    addOutcomeRow('복사', '', 30);
     addOutcomeRow('꽝', 0, 70);
   }
   resetOutcomes();
@@ -1041,7 +1042,7 @@
     const rows = [...document.querySelectorAll('#outcomes .orow')];
     const outcomes = rows.map((r) => ({
       label: r.querySelector('.oLabel').value.trim(),
-      mult: Number(r.querySelector('.oMult').value),
+      payout: Math.floor(Number(r.querySelector('.oPay').value)),
       prob: Number(r.querySelector('.oProb').value),
     }));
     const result = rows.findIndex((r) => r.querySelector('input[type=radio]').checked);
@@ -1049,8 +1050,8 @@
     if (!name) { toast('뽑기 이름 필요.'); return; }
     if (!(price > 0)) { toast('가격 필요.'); return; }
     if (outcomes.length < 2) { toast('결과 2개 이상 필요.'); return; }
-    if (rows.some((r) => r.querySelector('.oMult').value === '' || r.querySelector('.oProb').value === '')
-      || outcomes.some((o) => !o.label || !(o.mult >= 0) || !(o.prob >= 0))) { toast('결과 입력 확인.'); return; }
+    if (rows.some((r) => r.querySelector('.oPay').value === '' || r.querySelector('.oProb').value === '')
+      || outcomes.some((o) => !o.label || !(o.payout >= 0) || !(o.prob >= 0))) { toast('결과 입력 확인.'); return; }
     if (result < 0) { toast('실제 결과 선택.'); return; }
 
     $('addGacha').disabled = true;
